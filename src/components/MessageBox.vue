@@ -2,6 +2,7 @@
 import md from '@utils/markdown'
 import SidePanel from '@components/SidePanel.vue'
 import type { MessageWhy } from 'ccat-api'
+import type ModalBox from '@components/ModalBox.vue'
 
 const whyPanel = ref<InstanceType<typeof SidePanel>>()
 
@@ -14,7 +15,8 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-	regenerate: []
+	regenerate: [],
+	improve: [],
 }>()
 
 const { text, sender, file, when } = toRefs(props)
@@ -54,6 +56,7 @@ const fileUrl = computed(() => {
 	if (!file?.value) return ''
 	return URL.createObjectURL(file.value)
 })
+
 </script>
 
 <template>
@@ -104,6 +107,11 @@ const fileUrl = computed(() => {
 			<div v-if="why" class="tooltip tooltip-bottom" data-tip="Why this response">
 				<button class="btn btn-square btn-ghost btn-xs" @click="whyPanel?.togglePanel()">
 					<ph-question-mark class="size-4" />
+				</button>
+			</div>
+			<div class="tooltip tooltip-bottom" data-tip="Improve this answer">
+				<button class="btn btn-square btn-ghost btn-xs" @click="$emit('improve')">
+					<ph-textbox class="size-4" />
 				</button>
 			</div>
 		</div>

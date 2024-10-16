@@ -230,6 +230,45 @@ const wipeHistory = async () => {
 const scrollToBottom = () => {
 	if (route.path === '/') window.scrollTo({ behavior: 'smooth', left: 0, top: document.body.scrollHeight })
 }
+
+/**
+ * Improve answer section
+ * */
+
+const improveAnswerBox = ref<InstanceType<typeof ModalBox>>()
+
+const userQuestion = ref<string>("");
+const currentAgentAnswer = ref<string>("");
+const improvedAnswer = ref<string>("");
+const improvedAnswerSource = ref<string>("");
+
+const improveAnswer = (msgId: string) => {
+	const index = messagesState.value.messages.findIndex(m => m.id === msgId)
+	if (index === -1) return
+	userQuestion.value = messagesState.value.messages[index - 1].text
+	currentAgentAnswer.value = messagesState.value.messages[index].text;
+	improveAnswerBox.value?.toggleModal();
+}
+
+const dispatchImprovedAnswer = async () => {
+	improveAnswerBox.value?.toggleModal();
+	const document: string =
+		`Question:
+		${userQuestion.value}
+		Correct Answer:
+		${improvedAnswer.value}`
+	const metadata: Record<string, string> = {
+		"source": improvedAnswerSource.value,
+		"type": "correction"
+	}
+	// const blob = new Blob([document], { type: 'text/plain' })
+	const file = new File([document], 'correction.txt');
+	await RabbitHoleService.sendFile(file, metadata);
+}
+
+/**
+ * End improve answer section
+ * */
 </script>
 
 <template>
@@ -262,7 +301,9 @@ const scrollToBottom = () => {
 				:when="msg.when"
 				:file="msg.sender === 'user' ? msg.file : undefined"
 				:why="msg.sender === 'bot' ? msg.why : undefined"
-				@regenerate="regenerateResponse(msg.id)" />
+				@regenerate="regenerateResponse(msg.id)"
+				@improve="improveAnswer(msg.id)"
+			/>
 			<p v-if="messagesState.error" class="w-fit rounded-md bg-error p-4 font-semibold text-base-100">
 				{{ messagesState.error }}
 			</p>
@@ -410,6 +451,33 @@ const scrollToBottom = () => {
 					<InputBox v-model.trim="insertedURL" placeholder="Enter url..." />
 					<button class="btn btn-primary btn-sm" @click="dispatchWebsite">Send</button>
 				</div>
+			</ModalBox>
+		</Teleport>
+
+<!--		Improve answer of the agent by uploading a document containing a more correct answer -->
+		<Teleport to="#modal">
+			<ModalBox ref="improveAnswerBox" class="text-center">
+				<div class="flex flex-col text-center justify-center gap-4 text-neutral">
+					<h3 class="text-lg font-bold">Improve this answer</h3>
+					<p>
+						<b>Question: </b> <br>
+						{{ userQuestion }}
+					</p>
+					<p>
+						<b>Answer: </b> <br>
+						{{ currentAgentAnswer }}
+					</p>
+					<p>
+						<b>Write a more correct answer:</b> <br>
+					</p>
+					<textarea v-model="improvedAnswer" class="textarea block max-h-20 w-full resize-none overflow-auto bg-base-200 pr-10 !outline-2 shadow-lg !outline-offset-0 pt-[10px]"></textarea>
+					<p>
+						<b>source link:</b> <br>
+					</p>
+					<InputBox v-model="improvedAnswerSource" />
+					<button class="btn btn-primary btn-sm" @click="dispatchImprovedAnswer">Send</button>
+				</div>
+
 			</ModalBox>
 		</Teleport>
 	</div>
